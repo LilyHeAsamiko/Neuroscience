@@ -236,6 +236,43 @@ plt.title('w')
 #Use the terminology of Fig. 6.1 in Chapter 6.1.
 #Call the function AdEx.simulate_AdEx_neuron() with different parameters and try to create adapting, bursting and irregular firing patterns.
 
+#7. Hopfield Network model of associative memory
+from neurodynex3.hopfield_network import network, pattern_tools, plot_tools
+
+pattern_size = 5
+
+# create an instance of the class HopfieldNetwork
+hopfield_net = network.HopfieldNetwork(nr_neurons= pattern_size**2)
+# instantiate a pattern factory
+factory = pattern_tools.PatternFactory(pattern_size, pattern_size)
+# create a checkerboard pattern and add it to the pattern list
+checkerboard = factory.create_checkerboard()
+pattern_list = [checkerboard]
+
+# add random patterns to the list
+pattern_list.extend(factory.create_random_pattern_list(nr_patterns=3, on_probability=0.5))
+plot_tools.plot_pattern_list(pattern_list)
+# how similar are the random patterns and the checkerboard? Check the overlaps
+overlap_matrix = pattern_tools.compute_overlap_matrix(pattern_list)
+plot_tools.plot_overlap_matrix(overlap_matrix)
+
+# let the hopfield network "learn" the patterns. Note: they are not stored
+# explicitly but only network weights are updated !
+hopfield_net.store_patterns(pattern_list)
+
+# create a noisy version of a pattern and use that to initialize the network
+noisy_init_state = pattern_tools.flip_n(checkerboard, nr_of_flips=4)
+hopfield_net.set_state_from_pattern(noisy_init_state)
+
+# from this initial state, let the network dynamics evolve.
+states = hopfield_net.run_with_monitoring(nr_steps=4)
+
+# each network state is a vector. reshape it to the same shape used to create the patterns.
+states_as_patterns = factory.reshape_patterns(states)
+# plot the states of the network
+plot_tools.plot_state_sequence_and_overlap(states_as_patterns, pattern_list, reference_idx=0, suptitle="Network dynamics")
+
+
 MEMBRANE_TIME_SCALE_tau_m = 5 * b2.ms
 MEMBRANE_RESISTANCE_R = 500*b2.Mohm
 V_REST = -70.0 * b2.mV
@@ -246,3 +283,175 @@ ADAPTATION_VOLTAGE_COUPLING_a = 0.5 * b2.nS
 ADAPTATION_TIME_CONSTANT_tau_w = 100.0 * b2.ms
 SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b = 7.0 * b2.pA
 
+import matplotlib.pyplot as plt
+from neurodynex3.hopfield_network import network, pattern_tools, plot_tools
+import numpy
+
+# the letters we want to store in the hopfield network
+letter_list = ['A', 'B', 'C', 'S', 'X', 'Y', 'Z']
+
+# set a seed to reproduce the same noise in the next run
+# numpy.random.seed(123)
+
+abc_dictionary =pattern_tools.load_alphabet()
+print("the alphabet is stored in an object of type: {}".format(type(abc_dictionary)))
+# access the first element and get it's size (they are all of same size)
+pattern_shape = abc_dictionary['A'].shape
+print("letters are patterns of size: {}. Create a network of corresponding size".format(pattern_shape))
+# create an instance of the class HopfieldNetwork
+hopfield_net = network.HopfieldNetwork(nr_neurons= pattern_shape[0]*pattern_shape[1])
+
+# create a list using Pythons List Comprehension syntax:
+pattern_list = [abc_dictionary[key] for key in letter_list ]
+plot_tools.plot_pattern_list(pattern_list)
+
+# store the patterns
+hopfield_net.store_patterns(pattern_list)
+
+# # create a noisy version of a pattern and use that to initialize the network
+noisy_init_state = pattern_tools.get_noisy_copy(abc_dictionary['A'], noise_level=0.2)
+hopfield_net.set_state_from_pattern(noisy_init_state)
+
+# from this initial state, let the network dynamics evolve.
+states = hopfield_net.run_with_monitoring(nr_steps=4)
+
+# each network state is a vector. reshape it to the same shape used to create the patterns.
+states_as_patterns = pattern_tools.reshape_patterns(states, pattern_list[0].shape)
+
+# plot the states of the network
+plot_tools.plot_state_sequence_and_overlap(
+    states_as_patterns, pattern_list, reference_idx=0, suptitle="Network dynamics")
+
+'''
+The network is initialized with a (very) noisy pattern S(t=0)
+. Then, the dynamics recover pattern P0 in 5 iterations.
+Overlap matrix
+array([[ 1.  , -0.36,  0.2 , -0.36],
+       [-0.36,  1.  ,  0.12,  0.2 ],
+       [ 0.2 ,  0.12,  1.  , -0.36],
+       [-0.36,  0.2 , -0.36,  1.  ]])
+'''
+
+from neurodynex3.hopfield_network import network, pattern_tools, plot_tools
+
+pattern_size = 5
+
+# create an instance of the class HopfieldNetwork
+hopfield_net = network.HopfieldNetwork(nr_neurons= pattern_size**2)
+# instantiate a pattern factory
+factory = pattern_tools.PatternFactory(pattern_size, pattern_size)
+# create a checkerboard pattern and add it to the pattern list
+checkerboard = factory.create_checkerboard()
+pattern_list = [checkerboard]
+
+# add random patterns to the list
+pattern_list.extend(factory.create_random_pattern_list(nr_patterns=3, on_probability=0.5))
+plot_tools.plot_pattern_list(pattern_list)
+# how similar are the random patterns and the checkerboard? Check the overlaps
+overlap_matrix = pattern_tools.compute_overlap_matrix(pattern_list)
+plot_tools.plot_overlap_matrix(overlap_matrix,color_map='bwr')
+
+# let the hopfield network "learn" the patterns. Note: they are not stored
+# explicitly but only network weights are updated !
+hopfield_net.store_patterns(pattern_list)
+
+# create a noisy version of a pattern and use that to initialize the network
+noisy_init_state = pattern_tools.flip_n(checkerboard, nr_of_flips=4)
+hopfield_net.set_state_from_pattern(noisy_init_state)
+
+# from this initial state, let the network dynamics evolve.
+states = hopfield_net.run_with_monitoring(nr_steps=4)
+
+# each network state is a vector. reshape it to the same shape used to create the patterns.
+states_as_patterns = factory.reshape_patterns(states)
+# plot the states of the network
+plot_tools.plot_state_sequence_and_overlap(states_as_patterns, pattern_list, reference_idx=0, suptitle="Network dynamics")
+
+#using hfplot
+
+import neurodynex3.hopfield_network.plot_tools as hfplot
+import matplotlib.pyplot as plt
+'''
+using unchanged overlap-matrix
+'''
+reference_pattern=0
+initially_flipped_pixels=3
+nr_iterations=6 
+hfplot.plot_pattern_list(pattern_list)
+# let the hopfield network "learn" the patterns. Note: they are not stored
+# explicitly but only network weights are updated !
+hopfield_net.store_patterns(pattern_list)
+
+# how similar are the random patterns? Check the overlaps
+overlap_matrix = pattern_tools.compute_overlap_matrix(pattern_list)
+hfplot.plot_overlap_matrix(overlap_matrix,color_map='bwr')
+# create a noisy version of a pattern and use that to initialize the network
+noisy_init_state = pattern_tools.flip_n(pattern_list[reference_pattern], initially_flipped_pixels)
+hopfield_net.set_state_from_pattern(noisy_init_state)
+
+# uncomment the following line to enable a PROBABILISTIC network dynamic
+# hopfield_net.set_dynamics_probabilistic_sync(2.5)
+# uncomment the following line to enable an ASYNCHRONOUS network dynamic
+# hopfield_net.set_dynamics_sign_async()
+
+# run the network dynamics and record the network state at every time step
+states = hopfield_net.run_with_monitoring(nr_iterations)
+# each network state is a vector. reshape it to the same shape used to create the patterns.
+states_as_patterns = factory.reshape_patterns(states)
+# plot the states of the network
+hfplot.plot_state_sequence_and_overlap(states_as_patterns, pattern_list, reference_pattern)
+plt.show()
+
+
+'''
+using new overlap-matrix
+array([[ 1.   ,  0.375,  0.25 , -0.125],
+       [ 0.375,  1.   , -0.125,  0.   ],
+       [ 0.25 , -0.125,  1.   ,  0.625],
+       [-0.125,  0.   ,  0.625,  1.   ]])
+'''
+import numpy as np
+pattern_size=4
+nr_random_patterns=3
+reference_pattern=0
+initially_flipped_pixels=3
+nr_iterations=5 
+random_seed=None
+# instantiate a hofpfield network
+hopfield_net = network.HopfieldNetwork(pattern_size**2)
+
+# for the demo, use a seed to get a reproducible pattern
+np.random.seed(random_seed)
+
+# instantiate a pattern factory
+factory = pattern_tools.PatternFactory(pattern_size, pattern_size)
+# create a checkerboard pattern and add it to the pattern list
+checkerboard = factory.create_checkerboard()
+pattern_list = [checkerboard]
+# add random patterns to the list
+pattern_list.extend(factory.create_random_pattern_list(nr_random_patterns, on_probability=0.5))
+hfplot.plot_pattern_list(pattern_list)
+# let the hopfield network "learn" the patterns. Note: they are not stored
+# explicitly but only network weights are updated !
+hopfield_net.store_patterns(pattern_list)
+
+# how similar are the random patterns? Check the overlaps
+overlap_matrix = pattern_tools.compute_overlap_matrix(pattern_list)
+hfplot.plot_overlap_matrix(overlap_matrix,color_map='bwr')
+
+# create a noisy version of a pattern and use that to initialize the network
+noisy_init_state = pattern_tools.flip_n(pattern_list[reference_pattern], initially_flipped_pixels)
+hopfield_net.set_state_from_pattern(noisy_init_state)
+
+# uncomment the following line to enable a PROBABILISTIC network dynamic
+# hopfield_net.set_dynamics_probabilistic_sync(2.5)
+# uncomment the following line to enable an ASYNCHRONOUS network dynamic
+# hopfield_net.set_dynamics_sign_async()
+
+# run the network dynamics and record the network state at every time step
+states = hopfield_net.run_with_monitoring(nr_iterations)
+# each network state is a vector. reshape it to the same shape used to create the patterns.
+states_as_patterns = factory.reshape_patterns(states)
+# plot the states of the network
+hfplot.plot_state_sequence_and_overlap(states_as_patterns, pattern_list, reference_pattern)
+plt.show()
