@@ -1002,3 +1002,91 @@ class HopfieldNetwork:
 
 #if __name__ == "__main__":
 #    neurodynex3.hopfield_network.demo.run_demo()
+
+
+
+#Type I and type II neuron models
+import brian2 as b2
+import matplotlib.pyplot as plt
+import numpy as np
+from neurodynex3.tools import input_factory, plot_tools, spike_tools
+from neurodynex3.neuron_type import neurons
+
+# create an input current
+input_current = input_factory.get_step_current(50, 150, 1.*b2.ms, 0.5*b2.pA)
+
+# get one instance of class NeuronX and save that object in the variable 'a_neuron_of_type_X'
+a_neuron_of_type_X = neurons.NeuronX()  # we do not know if it's type I or II
+# simulate it and get the state variables
+state_monitor = a_neuron_of_type_X.run(input_current, 200*b2.ms)
+# plot state vs. time
+neurons.plot_data(state_monitor, title="Neuron of Type X")
+
+# get an instance of class NeuronY
+a_neuron_of_type_Y = neurons.NeuronY()  # we do not know if it's type I or II
+state_monitor = a_neuron_of_type_Y.run(input_current, 200*b2.ms)
+neurons.plot_data(state_monitor, title="Neuron of Type Y")
+
+spike_threshold=-50*b2.mV
+
+input_current = input_factory.get_step_current(100, 110, b2.ms, 0.5*b2.pA)
+state_monitor = a_neuron_of_type_X.run(input_current,210*b2.ms)
+spike_times = spike_tools.get_spike_time(state_monitor,spike_threshold)
+print(spike_times)
+print(type(spike_times))  # it's a Quantity
+
+spike_tools.pretty_print_spike_train_stats(state_monitor,100*b2.ms, 110*b2.ms)
+
+def get_firing_rate(neuron, input_current, spike_threshold=-50*b2.mV):
+    f=0
+    # inject a test current into the neuron and call it's run() function.
+    state_monitor = a_neuron_of_type_X.run(input_current,210*b2.ms)
+    # get the spike times using spike_tools.get_spike_times
+    st = spike_tools.get_spike_time(state_monitor,spike_threshold)
+    # from the spike times, calculate the firing rate f
+    isi = st[1:]-st[:-1]
+    if isi >0:
+        f=1/np.mean(isi)
+    return f
+
+spike_firing_rate = get_firing_rate(a_neuron_of_type_X, input_current, spike_threshold)
+print(spike_firing_rate)
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+def plot_fI_curve(Neuron):#NeuronClass
+
+    plt.figure()  # new figure
+
+    #neuron = NeuronClass()  # instantiate the neuron class
+    if Neuron == a_neuron_of_type_X:
+        neuron = neurons.NeuronX()
+    elif Neuron == a_neuron_of_type_Y:
+        neuron = neurons.NeuronX()
+        
+
+    I = np.arange(0.0,1.1,0.1)  # a range of current inputs
+    f = []
+
+    # loop over current values
+    for I_amp in I:
+
+        input_current = input_factory.get_step_current(0, int((I_amp+0.01)*1000), 1.*b2.ms, 0.5*b2.pA)
+        firing_rate = get_firing_rate(neuron, input_current, spike_threshold=1*b2.mV)
+        f.append(firing_rate)
+        
+    #
+    #firing_rate = get_firing_rate(neuron, input_current, spike_threshold=1*b2.mV)
+
+    plt.plot(I, f)
+    #plt.plot(input_current, firing_rate)
+    plt.xlabel('Amplitude of Injecting step current (pA)')
+    plt.ylabel('Firing rate (Hz)')
+    plt.grid()
+    plt.show()
+
+print("a_neuron_of_type_X is : {}".format(a_neuron_of_type_X.get_neuron_type()))
+plot_fI_curve(a_neuron_of_type_X)
+print("a_neuron_of_type_Y is : {}".format(a_neuron_of_type_Y.get_neuron_type()))
+plot_fI_curve(a_neuron_of_type_Y)
